@@ -1,0 +1,63 @@
+---
+title: "Analyse_leave_vote_estimates"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Analyse leave vote estimates}
+Leave_vote_constituency_result_known <- Leave_vote_constituency[!is.na(Leave_vote_constituency$Known.result), ]
+difference_estimate_result <- mapply(function(x, y) x - y, Leave_vote_constituency_result_known$Estimated.Leave.proportion, 
+                                     Leave_vote_constituency_result_known$Known.result)
+t.test(difference_estimate_result, mu = 0)
+Leave_vote_constituency_unterschaetzt <- Leave_vote_constituency_result_known[which(difference_estimate_result < -1 * sd(difference_estimate_result)), ]
+Leave_vote_constituency_ueberschaetzt <- Leave_vote_constituency_result_known[which(difference_estimate_result > sd(difference_estimate_result)), ]
+Leave_vote_constituency_result_known_EastMidlands <- Leave_vote_constituency_result_known[Leave_vote_constituency_result_known$Region == "East Midlands", ]
+difference_estimate_result_EastMidlands <- mapply(function(x, y) x - y, Leave_vote_constituency_result_known_EastMidlands$Estimated.Leave.proportion,
+                                                  Leave_vote_constituency_result_known_EastMidlands$Known.result)
+t.test(difference_estimate_result_EastMidlands, mu = 0)
+Leave_vote_constituency_result_known_EastofEngland <- Leave_vote_constituency_result_known[Leave_vote_constituency_result_known$Region == "East of England", ]
+difference_estimate_result_EastofEngland <- mapply(function(x, y) x - y, Leave_vote_constituency_result_known_EastofEngland$Estimated.Leave.proportion,
+                                                  Leave_vote_constituency_result_known_EastofEngland$Known.result)
+t.test(difference_estimate_result_EastofEngland, mu = 0)
+Leave_vote_constituency_result_known_London <- Leave_vote_constituency_result_known[Leave_vote_constituency_result_known$Region == "London", ]
+difference_estimate_result_London <- mapply(function(x, y) x - y, Leave_vote_constituency_result_known_London$Estimated.Leave.proportion,
+                                                  Leave_vote_constituency_result_known_London$Known.result)
+t.test(difference_estimate_result_London, mu = 0)
+Leave_vote_constituency_result_known_NorthEast <- Leave_vote_constituency_result_known[Leave_vote_constituency_result_known$Region == "North East", ]
+difference_estimate_result_NorthEast <- mapply(function(x, y) x - y, Leave_vote_constituency_result_known_NorthEast$Estimated.Leave.proportion,
+                                                  Leave_vote_constituency_result_known_NorthEast$Known.result)
+t.test(difference_estimate_result_NorthEast, mu = 0)
+Leave_vote_constituency_result_known_NorthWest <- Leave_vote_constituency_result_known[Leave_vote_constituency_result_known$Region == "North West", ]
+difference_estimate_result_NorthWest <- mapply(function(x, y) x - y, Leave_vote_constituency_result_known_NorthWest$Estimated.Leave.proportion,
+                                                  Leave_vote_constituency_result_known_NorthWest$Known.result)
+t.test(difference_estimate_result_NorthWest, mu = 0)
+Leave_vote_constituency_result_known_Scotland <- Leave_vote_constituency_result_known[Leave_vote_constituency_result_known$Region == "Scotland", ]
+difference_estimate_result_Scotland <- mapply(function(x, y) x - y, Leave_vote_constituency_result_known_Scotland$Estimated.Leave.proportion,
+                                                  Leave_vote_constituency_result_known_Scotland$Known.result)
+t.test(difference_estimate_result_Scotland, mu = 0)
+Leave_vote_constituency_result_known_SouthEast <- Leave_vote_constituency_result_known[Leave_vote_constituency_result_known$Region == "South East", ]
+difference_estimate_result_SouthEast <- mapply(function(x, y) x - y, Leave_vote_constituency_result_known_SouthEast$Estimated.Leave.proportion,
+                                                  Leave_vote_constituency_result_known_SouthEast$Known.result)
+t.test(difference_estimate_result_SouthEast, mu = 0)
+Leave_vote_constituency_result_known_SouthWest <- Leave_vote_constituency_result_known[Leave_vote_constituency_result_known$Region == "South West", ]
+difference_estimate_result_SouthWest <- mapply(function(x, y) x - y, Leave_vote_constituency_result_known_SouthWest$Estimated.Leave.proportion,
+                                                  Leave_vote_constituency_result_known_SouthWest$Known.result)
+t.test(difference_estimate_result_SouthWest, mu = 0)
+Leave_vote_constituency_result_known_Wales <- Leave_vote_constituency_result_known[Leave_vote_constituency_result_known$Region == "Wales", ]
+difference_estimate_result_Wales <- mapply(function(x, y) x - y, Leave_vote_constituency_result_known_Wales$Estimated.Leave.proportion,
+                                                  Leave_vote_constituency_result_known_Wales$Known.result)
+t.test(difference_estimate_result_Wales, mu = 0)
+Leave_vote_constituency_result_known_WestMidlands <- Leave_vote_constituency_result_known[Leave_vote_constituency_result_known$Region == "West Midlands", ]
+difference_estimate_result_WestMidlands <- mapply(function(x, y) x - y, Leave_vote_constituency_result_known_WestMidlands$Estimated.Leave.proportion,
+                                                  Leave_vote_constituency_result_known_WestMidlands$Known.result)
+t.test(difference_estimate_result_WestMidlands, mu = 0)
+Leave_vote_constituency_result_known_YorkshireandTheHumber <- Leave_vote_constituency_result_known[Leave_vote_constituency_result_known$Region == 
+                                                                                                     "Yorkshire and The Humber", ]
+difference_estimate_result_YorkshireandTheHumber <- mapply(function(x, y) x - y, 
+                                                          Leave_vote_constituency_result_known_YorkshireandTheHumber$Estimated.Leave.proportion,
+                                                          Leave_vote_constituency_result_known_YorkshireandTheHumber$Known.result)
+t.test(difference_estimate_result_YorkshireandTheHumber, mu = 0)
+```
