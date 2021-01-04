@@ -1,0 +1,153 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Daten einlesen}
+library(readxl)
+library(maps)
+library(mapdata)
+library(maptools)
+library(rgdal)
+library(ggmap)
+library(ggplot2)
+library(rgeos)
+library(broom)
+library(plyr)
+GE2015_constituency_results <- read.csv("C:/Users/loebu/OneDrive/Anfängerpraktikum/2015-UK-general-election-data-results - CSV/RESULTS FOR ANALYSIS.csv")
+GE2017_constituency_result <- read.csv("C:/Users/loebu/OneDrive/Anfängerpraktikum/HoC-GE2017-constituency-results.csv")
+GE2017_result_by_candidate <- read.csv("C:/Users/loebu/OneDrive/Anfängerpraktikum/HoC-GE2017-results-by-candidate.csv")
+GE2019_constituency_result <- read.csv("C:/Users/loebu/OneDrive/Anfängerpraktikum/HoC-GE2019-results-by-constituency-csv.csv")
+GE2019_result_by_candidate <- read.csv("C:/Users/loebu/OneDrive/Anfängerpraktikum/HoC-GE2019-results-by-candidate-csv.csv")
+population_by_age <- read_excel("C:/Users/loebu/OneDrive/Anfängerpraktikum/population-by-age_anders_sortiert.xlsx")
+population_by_age_smaller_2016 <- population_by_age[population_by_age$Date == 2016, c(1:9, 11)]
+population_by_age_smaller_2016 <- spread(population_by_age_smaller_2016, key = colnames(population_by_age_smaller_2016) [1], 
+                                         value = colnames(population_by_age_smaller_2016) [10])
+Leave_vote_constituency <- read.csv("C:/Users/loebu/OneDrive/Anfängerpraktikum/Revised estimates of leave vote in Westminster constituencies - demog_based_estimates.csv")
+shapefile.2 <- readOGR(dsn="C:/Users/loebu/OneDrive/Anfängerpraktikum", layer="Local_Authority_Districts__April_2019__UK_BUC_v2")
+mapdata.2 <- tidy(shapefile.2, region="LAD19NM")
+Neuwaehler <- read_excel("C:/Users/loebu/OneDrive/Anfängerpraktikum/Neuwähler.xlsx")
+```
+
+```{r Tabelle formatieren}
+GE2015_result123 <- GE2015_constituency_results[1:650, c(5, 2:4, 8:9, 12:147)]
+GE2015_result123[is.na(GE2015_result123)] <- 0
+GE2015_result123$Electorate <- as.numeric(sub(",", "", GE2015_result123$Electorate, fixed = TRUE))
+GE2015_result123$Total.number.of.valid.votes.counted <- as.numeric(sub(",", "", GE2015_result123$Total.number.of.valid.votes.counted, fixed = TRUE))
+GE2015_result123$votes_1 <- (GE2015_result123$SDLP + GE2015_result123$Alliance + GE2015_result123$SNP + GE2015_result123$LD + GE2015_result123$PC +
+                            GE2015_result123$Green + GE2015_result123$SF) / GE2015_result123$Total.number.of.valid.votes.counted
+GE2015_result123$votes_2 <- (GE2015_result123$UUP + GE2015_result123$Lab + GE2015_result123$DUP) / GE2015_result123$Total.number.of.valid.votes.counted
+GE2015_result123$votes_3 <- (GE2015_result123$C + GE2015_result123$UKIP) / GE2015_result123$Total.number.of.valid.votes.counted
+GE2015_result123$votes_others <- 1 - GE2015_result123$votes_1 - GE2015_result123$votes_2 - GE2015_result123$votes_3
+GE2015_result123 <- GE2015_result123[ , -c(7:142)]
+GE2017_result123 <- GE2017_constituency_result[ , c(1, 3, 5:6, 12:13, 16:28)]
+GE2017_result123$votes_1 <- (GE2017_result123$alliance + GE2017_result123$sdlp + GE2017_result123$snp + GE2017_result123$ld + GE2017_result123$pc +
+                               GE2017_result123$green + GE2017_result123$sf) / GE2017_result123$valid_votes
+GE2017_result123$votes_2 <- (GE2017_result123$uup + GE2017_result123$lab + GE2017_result123$dup) / GE2017_result123$valid_votes
+GE2017_result123$votes_3 <- (GE2017_result123$con + GE2017_result123$ukip) / GE2017_result123$valid_votes
+GE2017_result123$votes_others <- 1- GE2017_result123$votes_1 - GE2017_result123$votes_2 - GE2017_result123$votes_3
+GE2017_result123 <- GE2017_result123[ , -c(7:19)]
+GE2019_result123 <- GE2019_constituency_result[ , c(1, 3, 5:6, 15:16, 19:31)]
+GE2019_result123$votes_1 <- (GE2019_result123$alliance + GE2019_result123$sdlp + GE2019_result123$snp + GE2019_result123$ld + GE2019_result123$pc +
+                               GE2019_result123$green + GE2019_result123$sf) / GE2019_result123$valid_votes
+GE2019_result123$votes_2 <- (GE2019_result123$uup + GE2019_result123$lab + GE2019_result123$dup) / GE2019_result123$valid_votes
+GE2019_result123$votes_3 <- (GE2019_result123$con + GE2019_result123$brexit) / GE2019_result123$valid_votes
+GE2019_result123$votes_others <- 1- GE2019_result123$votes_1 - GE2019_result123$votes_2 - GE2019_result123$votes_3
+GE2019_result123 <- GE2019_result123[ , -c(7:19)]
+Neuwaehler_2017 <- Neuwaehler[Neuwaehler$Year == 2017, ]
+Neuwaehler_2017$total_Neuwaehler <- Neuwaehler_2017$`Age 18` + Neuwaehler_2017$`Age 19`
+Neuwaehler_2019 <- Neuwaehler[Neuwaehler$Year == 2019, ]
+Neuwaehler_2019$total_Neuwaehler <- Neuwaehler_2019$`Age 18` + Neuwaehler_2019$`Age 19`
+Neuwaehler_15_19 <- Neuwaehler[Neuwaehler$Year == 2019, c(1, 2, 4)]
+Neuwaehler_15_19$total_Neuwaehler <- Neuwaehler_2017$total_Neuwaehler + Neuwaehler_2019$total_Neuwaehler
+colnames(GE2017_result123) [1] <- "Constituency.ID"
+colnames(GE2019_result123) [1] <- "Constituency.ID"
+Wahlstrom_2015_zu_2017 <- join(GE2015_result123, GE2017_result123, by = "Constituency.ID")
+colnames(Wahlstrom_2015_zu_2017) [16:19] <- c("17_votes_1", "17_votes_2", "17_votes_3", "17_votes_others")
+Wahlstrom_2015_zu_2017$change_votes_1 <- Wahlstrom_2015_zu_2017$`17_votes_1` - Wahlstrom_2015_zu_2017$votes_1
+Wahlstrom_2015_zu_2017$change_votes_2 <- Wahlstrom_2015_zu_2017$`17_votes_2` - Wahlstrom_2015_zu_2017$votes_2
+Wahlstrom_2015_zu_2017$change_votes_3 <- Wahlstrom_2015_zu_2017$`17_votes_3` - Wahlstrom_2015_zu_2017$votes_3
+Wahlstrom_2015_zu_2017$change_votes_others <- Wahlstrom_2015_zu_2017$`17_votes_others` - Wahlstrom_2015_zu_2017$votes_others
+Wahlstrom_2015_zu_2017 <- Wahlstrom_2015_zu_2017[ , -c(5:13, 16:19)]
+colnames(Neuwaehler_2017) [1] <- "Constituency.ID"
+Wahlstrom_2015_zu_2017_NW <- join(Wahlstrom_2015_zu_2017, Neuwaehler_2017, by = "Constituency.ID")
+Wahlstrom_2015_zu_2017_NW$NW_relativ <- Wahlstrom_2015_zu_2017_NW$total_Neuwaehler / Wahlstrom_2015_zu_2017_NW$`Gesamtbevölkerung über 18`
+#
+Wahlstrom_2017_zu_2019 <- join(GE2017_result123, GE2019_result123, by = "Constituency.ID")
+colnames(Wahlstrom_2017_zu_2019) [16:19] <- c("19_votes_1", "19_votes_2", "19_votes_3", "19_votes_others")
+Wahlstrom_2017_zu_2019$change_votes_1 <- Wahlstrom_2017_zu_2019$`19_votes_1` - Wahlstrom_2017_zu_2019$votes_1
+Wahlstrom_2017_zu_2019$change_votes_2 <- Wahlstrom_2017_zu_2019$`19_votes_2` - Wahlstrom_2017_zu_2019$votes_2
+Wahlstrom_2017_zu_2019$change_votes_3 <- Wahlstrom_2017_zu_2019$`19_votes_3` - Wahlstrom_2017_zu_2019$votes_3
+Wahlstrom_2017_zu_2019$change_votes_others <- Wahlstrom_2017_zu_2019$`19_votes_others` - Wahlstrom_2017_zu_2019$votes_others
+Wahlstrom_2017_zu_2019 <- Wahlstrom_2017_zu_2019[ , -c(5:13, 16:19)]
+colnames(Neuwaehler_2019) [1] <- "Constituency.ID"
+Wahlstrom_2017_zu_2019_NW <- join(Wahlstrom_2017_zu_2019, Neuwaehler_2019, by = "Constituency.ID")
+Wahlstrom_2017_zu_2019_NW$NW_relativ <- Wahlstrom_2017_zu_2019_NW$total_Neuwaehler / Wahlstrom_2017_zu_2019_NW$`Gesamtbevölkerung über 18`
+#
+Wahlstrom_2015_zu_2019 <- join(GE2015_result123, GE2019_result123, by = "Constituency.ID")
+colnames(Wahlstrom_2015_zu_2019) [16:19] <- c("19_votes_1", "19_votes_2", "19_votes_3", "19_votes_others")
+Wahlstrom_2015_zu_2019$change_votes_1 <- Wahlstrom_2015_zu_2019$`19_votes_1` - Wahlstrom_2015_zu_2019$votes_1
+Wahlstrom_2015_zu_2019$change_votes_2 <- Wahlstrom_2015_zu_2019$`19_votes_2` - Wahlstrom_2015_zu_2019$votes_2
+Wahlstrom_2015_zu_2019$change_votes_3 <- Wahlstrom_2015_zu_2019$`19_votes_3` - Wahlstrom_2015_zu_2019$votes_3
+Wahlstrom_2015_zu_2019$change_votes_others <- Wahlstrom_2015_zu_2019$`19_votes_others` - Wahlstrom_2015_zu_2019$votes_others
+Wahlstrom_2015_zu_2019 <- Wahlstrom_2015_zu_2019[ , -c(5:13, 16:19)]
+colnames(Neuwaehler_2019) [1] <- "Constituency.ID"
+Wahlstrom_2015_zu_2019_NW <- join(Wahlstrom_2015_zu_2019, Neuwaehler_2019, by = "Constituency.ID")
+Wahlstrom_2015_zu_2019_NW$NW_relativ <- Wahlstrom_2015_zu_2019_NW$total_Neuwaehler / Wahlstrom_2015_zu_2019_NW$`Gesamtbevölkerung über 18`
+```
+
+```{r Grafiken}
+library(ggplot2)
+ggplot(data = Wahlstrom_2015_zu_2017_NW, aes(x = NW_relativ, y = change_votes_1)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+ggplot(data = Wahlstrom_2015_zu_2017_NW, aes(x = NW_relativ, y = change_votes_2)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+ggplot(data = Wahlstrom_2015_zu_2017_NW, aes(x = NW_relativ, y = change_votes_3))+
+  geom_point() +
+  geom_smooth(method = "lm")
+ggplot(data = Wahlstrom_2017_zu_2019_NW, aes(x = NW_relativ, y = change_votes_1)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+ggplot(data = Wahlstrom_2017_zu_2019_NW, aes(x = NW_relativ, y = change_votes_2)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+ggplot(data = Wahlstrom_2017_zu_2019_NW, aes(x = NW_relativ, y = change_votes_3))+
+  geom_point() +
+  geom_smooth(method = "lm")
+ggplot(data = Wahlstrom_2015_zu_2019_NW, aes(x = NW_relativ, y = change_votes_1)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+ggplot(data = Wahlstrom_2015_zu_2019_NW, aes(x = NW_relativ, y = change_votes_2)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+ggplot(data = Wahlstrom_2015_zu_2019_NW, aes(x = NW_relativ, y = change_votes_3))+
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+```{r Lineare Modelle}
+m1517_1 <- lm(data = Wahlstrom_2015_zu_2017_NW, change_votes_1 ~ NW_relativ)
+summary(m1517_1)
+m1517_2 <- lm(data = Wahlstrom_2015_zu_2017_NW, change_votes_2 ~ NW_relativ)
+summary(m1517_2)
+m1517_3 <- lm(data = Wahlstrom_2015_zu_2017_NW, change_votes_3 ~ NW_relativ)
+summary(m1517_3)
+m1719_1 <- lm(data = Wahlstrom_2017_zu_2019_NW, change_votes_1 ~ NW_relativ)
+summary(m1719_1)
+m1719_2 <- lm(data = Wahlstrom_2017_zu_2019_NW, change_votes_2 ~ NW_relativ)
+summary(m1719_2)
+m1719_3 <- lm(data = Wahlstrom_2017_zu_2019_NW, change_votes_3 ~ NW_relativ)
+summary(m1719_3)
+m1519_1 <- lm(data = Wahlstrom_2015_zu_2019_NW, change_votes_1 ~ NW_relativ)
+summary(m1519_1)
+m1519_2 <- lm(data = Wahlstrom_2015_zu_2019_NW, change_votes_2 ~ NW_relativ)
+summary(m1519_2)
+m1519_3 <- lm(data = Wahlstrom_2015_zu_2019_NW, change_votes_3 ~ NW_relativ)
+summary(m1519_3)
+```
