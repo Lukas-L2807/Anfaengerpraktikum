@@ -1,0 +1,57 @@
+---
+title: "R Brexit by Local Authorities Map"
+output: html_notebook
+---
+
+```{r import EU referendum dataset}
+#read.csv("EU Referendum - electoral data - voting area.csv")
+brexit <- read.csv("EU-referendum-result-data.csv")
+#brexit_area <- 
+brexitdata <- brexit %>% 
+  summarise(id, Region, Area, Electorate, Remain, Leave, tot_Votes = Remain + Leave, decision_for_Brexit = (Remain < Leave), odds_Brexit = Leave/Remain)
+brexitdata
+```
+
+Shapefile der local authorities für Brexit
+
+```{r local authority shapefile(since brexit data is split in these)}
+shapefile <- readOGR(dsn="/Users/Anar/Desktop/Anfängerpraktikum/Data/Local_Authority_Districts__December_2015__Boundaries-shp",layer="Local_Authority_Districts__December_2015__Boundaries")
+mapdata <- tidy(shapefile, region="lad15nm") #This might take a few minutes
+```
+
+```{r mapcheck}
+#Check the shapefile has loaded correctly by plotting an outline map of Great Britain
+gg <- ggplot() + geom_polygon(data = mapdata, aes(x = long, y = lat, group = group), color = "#FFFFFF", size = 0.25)
+gg <- gg + coord_fixed(1) #This gives the map a 1:1 aspect ratio to prevent the map from appearing squashed
+print(gg)
+```
+
+```{r with our dataset heatmap}
+#compare element names and equalize levels for join of dataset with mapdata
+sort(unique(brexitdata$Area))
+sort(unique(mapdata$id))
+#UNGENAUIGKEIT, da falsche Dimension!!!
+
+#Join brexitdata with mapdata
+df <- mapdata %>% inner_join(brexitdata, by = c("id" = "Area"))
+
+#Create the heatmap using the ggplot2 package
+gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = decision_for_Brexit), color = NA, size = 0.25)
+gg <- gg + coord_fixed(1)
+gg <- gg + theme_minimal()
+gg <- gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+gg <- gg + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+gg <- gg + theme(axis.title.y=element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+print(gg)
+
+#Create the heatmap using the ggplot2 package more gradient scaled
+gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = odds_Brexit), color = NA, size = 0.25)
+gg <- gg + scale_fill_gradientn(colours = c("green", "red"))
+gg <- gg + coord_fixed(1)
+gg <- gg + theme_minimal()
+gg <- gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+gg <- gg + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+gg <- gg + theme(axis.title.y=element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+print(gg)
+```
+

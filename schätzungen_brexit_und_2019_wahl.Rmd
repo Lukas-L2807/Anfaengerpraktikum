@@ -1,0 +1,97 @@
+---
+title: "R Schätzungen Brexit by constituency und auswertung 2019"
+output: html_notebook
+---
+
+```{r read csv}
+Leave_vote_constituency <- read.csv("Revised estimates of leave vote in Westminster constituencies - demog_based_estimates.csv")
+Leave_vote_constituency
+```
+
+```{r constituency estimates brexit and other things}
+density_constituencies <- read.csv("density_constituencies.csv")
+density_constituencies
+density_constituencies %>% anti_join(Leave_vote_constituency, by = c("PCON19CD" = "PCON11CD")) #18 missing/excluded
+Leave_vote_constituency %>% anti_join(density_constituencies, by = c("PCON11CD" = "PCON19CD")) #all ok
+
+leave_vote_estimates_density <- density_constituencies %>% inner_join(Leave_vote_constituency, by = c("PCON19CD" = "PCON11CD"))
+leave_vote_estimates_density
+
+ggplot(leave_vote_estimates_density, aes(x = log_density, y = Estimated.Leave.proportion)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(leave_vote_estimates_density, aes(x = density, y = Estimated.Leave.proportion)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+
+```
+
+```{r votes and 19}
+Auswertung_2019 <- read.csv("Auswertung_2019.csv", sep = ";")
+Auswertung_2019
+Wahl19 <- read.csv("Wahl19.csv", sep = ";")
+Wahl19
+```
+
+```{r junge/mittlere/altere Generation und wahlentscheidungen 2019 Wahl}
+Auswertung_2019$Anteil.Hard.Brexit <- as.numeric(str_replace_all(Auswertung_2019$Anteil.Hard.Brexit ,regex("%"), ""))
+Auswertung_2019$Anteil.Soft.Brexit <- as.numeric(str_replace_all(Auswertung_2019$Anteil.Soft.Brexit ,regex("%"), ""))
+Auswertung_2019$Anteil.No.Brexit <- as.numeric(str_replace_all(Auswertung_2019$Anteil.No.Brexit ,regex("%"), ""))
+Auswertung_2019$Jung <- as.numeric(str_replace_all(Auswertung_2019$Jung ,regex("%"), ""))
+Auswertung_2019$Mittel <- as.numeric(str_replace_all(Auswertung_2019$Mittel ,regex("%"), ""))
+Auswertung_2019$Alt <- as.numeric(str_replace_all(Auswertung_2019$Alt ,regex("%"), ""))
+Auswertung_2019
+
+ggplot(Auswertung_2019, aes(x = Jung, y = Anteil.Hard.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(Auswertung_2019, aes(x = Mittel, y = Anteil.Hard.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(Auswertung_2019, aes(x = Alt, y = Anteil.Hard.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(Auswertung_2019, aes(x = Jung, y = Anteil.Soft.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(Auswertung_2019, aes(x = Mittel, y = Anteil.Soft.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(Auswertung_2019, aes(x = Alt, y = Anteil.Soft.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(Auswertung_2019, aes(x = Jung, y = Anteil.No.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(Auswertung_2019, aes(x = Mittel, y = Anteil.No.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(Auswertung_2019, aes(x = Alt, y = Anteil.No.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+```{r age}
+gdp <- read.csv("37badfc8.csv")
+gdp
+brexitdata_regions
+
+table(sort(gdp$NUTS1.Regions) == sort(brexitdata_regions$Region)) #true
+
+brexitdata_regions_gdp <- gdp %>% inner_join(brexitdata_regions, by = c("NUTS1.Regions" = "Region"))
+brexitdata_regions_gdp
+
+ggplot(brexitdata_regions_gdp, aes(x = GDP.per..head........., y = mean_odds)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```

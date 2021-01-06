@@ -1,0 +1,143 @@
+---
+title: "R hard-soft-no-brexit und Bevölkerungsdichte + Mapdarstellung 3 Kathegorien & Bevölkerungsdichte"
+output: html_notebook
+---
+
+Florians 2019 Tabelle einlesen und mit Bevölkerungsdichte anschauen
+
+```{r differentiate Brexit}
+liste_brexitlevel <- read.csv("Liste.csv", sep = ";")
+liste_brexitlevel
+density_constituencies <- read.csv("density_constituencies.csv")
+density_constituencies
+
+table(sort(unique(density_constituencies$PCON19CD)) == sort(unique(liste_brexitlevel$ons_id))) #TRUE
+
+liste_brexitlvl_df <- density_constituencies %>%
+  inner_join(liste_brexitlevel, by = c("PCON19CD" = "ons_id"))
+liste_brexitlvl_df
+
+wahl19_nach_gruppen <- read.csv("Wahl19_nach_Gruppen.csv", sep = ";")
+wahl19_nach_gruppen 
+
+table(sort(unique(wahl19_nach_gruppen$ons_id)) == sort(unique(liste_brexitlvl_df$PCON19CD))) #TRUE
+
+liste_brexitlvl_df <- liste_brexitlvl_df %>%
+  inner_join(wahl19_nach_gruppen, by = c("PCON19CD" = "ons_id")) %>%
+  summarise(PCON19NM, density, log_density, Mehrheit, Hard.Brexit, Soft.Brexit, No.Brexit, 
+            Anteil.Hard.Brexit, Anteil.Soft.Brexit, Anteil.No.Brexit)
+liste_brexitlvl_df$Anteil.Hard.Brexit <- as.numeric(str_replace_all(liste_brexitlvl_df$Anteil.Hard.Brexit ,regex("%"), ""))
+liste_brexitlvl_df$Anteil.Soft.Brexit <- as.numeric(str_replace_all(liste_brexitlvl_df$Anteil.Soft.Brexit ,regex("%"), ""))
+liste_brexitlvl_df$Anteil.No.Brexit <- as.numeric(str_replace_all(liste_brexitlvl_df$Anteil.No.Brexit ,regex("%"), ""))
+liste_brexitlvl_df
+
+#density und 3 brexitarten
+ggplot(liste_brexitlvl_df, aes(x = density, y = Hard.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(liste_brexitlvl_df, aes(x = log_density, y = Hard.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+
+ggplot(liste_brexitlvl_df, aes(x = density, y = Anteil.Hard.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(liste_brexitlvl_df, aes(x = log_density, y = Anteil.Hard.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(liste_brexitlvl_df, aes(x = density, y = Soft.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(liste_brexitlvl_df, aes(x = log_density, y = Soft.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(liste_brexitlvl_df, aes(x = density, y = Anteil.Soft.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(liste_brexitlvl_df, aes(x = log_density, y = Anteil.Soft.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(liste_brexitlvl_df, aes(x = density, y = No.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(liste_brexitlvl_df, aes(x = log_density, y = No.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(liste_brexitlvl_df, aes(x = density, y = Anteil.No.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(liste_brexitlvl_df, aes(x = log_density, y = Anteil.No.Brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+```
+
+```{r korrelation}
+cor(liste_brexitlvl_df[c("density", "log_density")], liste_brexitlvl_df[c("Hard.Brexit", "Anteil.Hard.Brexit", "Soft.Brexit", "Anteil.Soft.Brexit", "No.Brexit", "Anteil.No.Brexit")], use="complete.obs", method="pearson")
+
+cor(liste_brexitlvl_df[c("density", "log_density")], liste_brexitlvl_df[c("Hard.Brexit", "Anteil.Hard.Brexit", "Soft.Brexit", "Anteil.Soft.Brexit", "No.Brexit", "Anteil.No.Brexit")], use="complete.obs", method="kendall")
+
+cor(liste_brexitlvl_df[c("density", "log_density")], liste_brexitlvl_df[c("Hard.Brexit", "Anteil.Hard.Brexit", "Soft.Brexit", "Anteil.Soft.Brexit", "No.Brexit", "Anteil.No.Brexit")], use="complete.obs", method="spearman")
+```
+
+Take map with Westminister Constituencies of the UK
+
+Hard-Soft-No-Brexit
+
+```{r shapefile}
+shapefile <- readOGR(dsn="/Users/Anar/Desktop/Anfängerpraktikum/Data/UK_Westminster_Parliamentary_Consituencies__December_2016__Boundaries-shp",layer="UK_Westminster_Parliamentary_Consituencies__December_2016__Boundaries")
+mapdata <- tidy(shapefile, region="pcon16nm") #This might take a few minutes
+```
+
+
+```{r mapcheck}
+#Check the shapefile has loaded correctly by plotting an outline map of the UK
+gg <- ggplot() + geom_polygon(data = mapdata, aes(x = long, y = lat, group = group), color = "#FFFFFF", size = 0.25)
+gg <- gg + coord_fixed(1) #This gives the map a 1:1 aspect ratio to prevent the map from appearing squashed
+print(gg)
+```
+
+```{r try to put into map shapefile}
+#check if names of constituencies are equal
+table(sort(liste_brexitlvl_df$PCON19NM) == sort(unique(shapefile$pcon16nm))) #all true
+
+#Join pop_density_df with mapdata
+df <- mapdata %>% inner_join(liste_brexitlvl_df, by = c("id" = "PCON19NM"))
+
+gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = Mehrheit), color = NA, size = 0.25)
+gg <- gg + coord_fixed(1)
+gg <- gg + theme_minimal()
+gg <- gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+gg <- gg + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+gg <- gg + theme(axis.title.y=element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+print(gg)
+```
+
+Map der Bevölkerungsdichte logaritmisch skaliert
+
+```{r try to put into map shapefile}
+#check if names of constituencies are equal
+table(sort(density_constituencies$PCON19NM) == sort(unique(shapefile$pcon16nm))) #all true
+
+#Join pop_density_df with mapdata
+df <- mapdata %>% inner_join(density_constituencies, by = c("id" = "PCON19NM"))
+
+gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = log_density), color = NA, size = 0.25)
+gg <- gg + scale_fill_gradientn(colours = c("green", "red"))
+gg <- gg + coord_fixed(1)
+gg <- gg + theme_minimal()
+gg <- gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+gg <- gg + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+gg <- gg + theme(axis.title.y=element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+print(gg)
+```

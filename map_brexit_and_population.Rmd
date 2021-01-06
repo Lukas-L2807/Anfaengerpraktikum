@@ -1,0 +1,153 @@
+---
+title: "R Brexit and Population Maps by Regions"
+output: html_notebook
+---
+
+Versuche, dies als Heatmap darzustellen mit 2 Farben:
+
+Take map with REGIONS of the UK
+
+```{r import EU referendum dataset}
+#read.csv("EU Referendum - electoral data - voting area.csv")
+brexit <- read.csv("EU-referendum-result-data.csv")
+#brexit_area <- 
+brexitdata <- brexit %>% 
+  summarise(id, Region, Area, Electorate, Remain, Leave, tot_Votes = Remain + Leave, decision_for_Brexit = (Remain < Leave), odds_Brexit = Leave/Remain)
+brexitdata
+```
+
+
+```{r shapefile}
+shapefile <- readOGR(dsn="/Users/Anar/Desktop/Anfängerpraktikum/Data/NUTS_Level_1__January_2018__Boundaries-shp"
+                     ,layer="NUTS_Level_1__January_2018__Boundaries")
+mapdata <- tidy(shapefile, region="nuts118nm") #This might take a few minutes
+```
+
+```{r mapcheck}
+#Check the shapefile has loaded correctly by plotting an outline map of the UK
+gg <- ggplot() + geom_polygon(data = mapdata, aes(x = long, y = lat, group = group), color = "#FFFFFF", size = 0.25)
+gg <- gg + coord_fixed(1) #This gives the map a 1:1 aspect ratio to prevent the map from appearing squashed
+print(gg)
+```
+
+Brexit
+
+```{r with our dataset heatmap}
+#compare element names and equalize levels for join of dataset with mapdata
+#unique(brexitdata$Region)
+#unique(mapdata$id)
+#change elements in brexit dataset and mapdata
+library(stringr)
+brexitdata$Region <- str_replace_all(brexitdata$Region, "^East$", "East of England")
+brexitdata$Region <- str_replace_all(brexitdata$Region, "^East Midlands$", "East Midlands (England)")
+brexitdata$Region <- str_replace_all(brexitdata$Region, "^North East$", "North East (England)")
+brexitdata$Region <- str_replace_all(brexitdata$Region, "^North West$", "North West (England)")
+brexitdata$Region <- str_replace_all(brexitdata$Region, "^South East$", "South East (England)")
+brexitdata$Region <- str_replace_all(brexitdata$Region, "^South West$", "South West (England)")
+brexitdata$Region <- str_replace_all(brexitdata$Region, "^West Midlands$", "West Midlands (England)")
+unique(brexitdata$Region) #Kontrolle
+
+#Join brexitdata with mapdata
+df <- mapdata %>% inner_join(brexitdata, by = c("id" = "Region"))
+
+#Create the heatmap using the ggplot2 package
+gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = decision_for_Brexit), color = "#FFFFFF", size = 0.25)
+gg <- gg + coord_fixed(1)
+gg <- gg + theme_minimal()
+gg <- gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = 'none')
+gg <- gg + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+gg <- gg + theme(axis.title.y=element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+print(gg)
+
+#Create the heatmap using the ggplot2 package more gradient scaled
+gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = odds_Brexit), color = "#FFFFFF", size = 0.25)
+gg <- gg + scale_fill_gradientn(colours = c("green", "blue", "red"))
+gg <- gg + coord_fixed(1)
+gg <- gg + theme_minimal()
+gg <- gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+gg <- gg + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+gg <- gg + theme(axis.title.y=element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+print(gg)
+```
+
+Populationsanalysen
+
+```{r population density of regions(2019), same shapefile as above}
+densityregion2019 <- read.csv("regionpopulationdensity2019.csv")
+densityregion2019_df <- densityregion2019 %>%
+  summarise(Region = X, Population, Working.age.16.to.64.years, Pension.age, Median.age, Population.density)
+densityregion2019_df <- densityregion2019_df %>%
+  mutate(Working.age.16.to.64.years = as.numeric(str_replace_all(Working.age.16.to.64.years, regex("%"), "")),
+         Pension.age = as.numeric(str_replace_all(Pension.age, regex("%"), "")))
+densityregion2019_df <- densityregion2019_df %>% 
+  mutate(log_density = log(Population.density))
+densityregion2019_df
+  
+
+#replace Regionnames, so that it matches mapdata id names
+densityregion2019_df$Region <- str_replace_all(densityregion2019_df$Region, "^East$", "East of England")
+densityregion2019_df$Region <- str_replace_all(densityregion2019_df$Region, "^East Midlands$", "East Midlands (England)")
+densityregion2019_df$Region <- str_replace_all(densityregion2019_df$Region, "^North East$", "North East (England)")
+densityregion2019_df$Region <- str_replace_all(densityregion2019_df$Region, "^North West$", "North West (England)")
+densityregion2019_df$Region <- str_replace_all(densityregion2019_df$Region, "^South East$", "South East (England)")
+densityregion2019_df$Region <- str_replace_all(densityregion2019_df$Region, "^South West$", "South West (England)")
+densityregion2019_df$Region <- str_replace_all(densityregion2019_df$Region, "^West Midlands$", "West Midlands (England)")
+densityregion2019_df$Region <- str_replace_all(densityregion2019_df$Region, "^Yorkshire and the Humber$", "Yorkshire and The Humber")
+
+table(sort(unique(densityregion2019_df$Region)) == sort(unique(mapdata$id)))
+
+#Join brexitdata with mapdata
+df <- mapdata %>% inner_join(densityregion2019_df, by = c("id" = "Region"))
+
+#Create the heatmap using the ggplot2 package, population density
+gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = Population.density), color = "#FFFFFF", size = 0.25)
+gg <- gg + scale_colour_manual(breaks = c("100", "200", "300", "400", "500", "600", "5000"))
+gg <- gg + coord_fixed(1)
+gg <- gg + theme_minimal()
+gg <- gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+gg <- gg + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+gg <- gg + theme(axis.title.y=element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+print(gg)
+
+#Create the heatmap using the ggplot2 package, logarithmic population density
+gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = log_density), color = "#FFFFFF", size = 0.25)
+gg <- gg + scale_fill_gradientn(colours = c("green", "red"))
+gg <- gg + coord_fixed(1)
+gg <- gg + theme_minimal()
+gg <- gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+gg <- gg + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+gg <- gg + theme(axis.title.y=element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+print(gg)
+
+#Create the heatmap using the ggplot2 package, Median age
+gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = Median.age), color = "#FFFFFF", size = 0.25)
+gg <- gg + scale_fill_gradientn(colours = c("green", "red"))
+gg <- gg + coord_fixed(1)
+gg <- gg + theme_minimal()
+gg <- gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+gg <- gg + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+gg <- gg + theme(axis.title.y=element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+print(gg)
+
+#Create the heatmap using the ggplot2 package, Working age distribution percentage
+gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = Working.age.16.to.64.years), color = "#FFFFFF", size = 0.25)
+gg <- gg + scale_fill_gradientn(colours = c("green", "red"))
+gg <- gg + coord_fixed(1)
+gg <- gg + theme_minimal()
+gg <- gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+gg <- gg + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+gg <- gg + theme(axis.title.y=element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+print(gg)
+
+#Create the heatmap using the ggplot2 package, Pension age distribution percentage
+gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = Pension.age), color = "#FFFFFF", size = 0.25)
+gg <- gg + scale_fill_gradientn(colours = c("green", "red"))
+gg <- gg + coord_fixed(1)
+gg <- gg + theme_minimal()
+gg <- gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+gg <- gg + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+gg <- gg + theme(axis.title.y=element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+print(gg)
+```
+
+
