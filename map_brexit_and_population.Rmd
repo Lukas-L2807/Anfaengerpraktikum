@@ -16,6 +16,19 @@ brexitdata <- brexit %>%
 brexitdata
 ```
 
+```{r regional data}
+brexitdata <- brexitdata %>% 
+  ungroup() %>%
+  group_by(Region) %>%
+  mutate(Sum_Remain = sum(Remain), Sum_Leave = sum(Leave)) %>%
+  mutate(odds_region_brexit = Sum_Leave / Sum_Remain) %>%
+  summarize(Region, Sum_Remain, Sum_Leave, odds_region_brexit)
+brexitdata <- unique(brexitdata)
+brexitdata <- brexitdata %>% 
+  mutate(decision_for_Brexitregional = (Sum_Remain < Sum_Leave))
+brexitdata
+```
+
 
 ```{r shapefile}
 shapefile <- readOGR(dsn="/Users/Anar/Desktop/Anfängerpraktikum/Data/NUTS_Level_1__January_2018__Boundaries-shp"
@@ -51,7 +64,7 @@ unique(brexitdata$Region) #Kontrolle
 df <- mapdata %>% inner_join(brexitdata, by = c("id" = "Region"))
 
 #Create the heatmap using the ggplot2 package
-gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = decision_for_Brexit), color = "#FFFFFF", size = 0.25)
+gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = decision_for_Brexitregional), color = "#FFFFFF", size = 0.25)
 gg <- gg + coord_fixed(1)
 gg <- gg + theme_minimal()
 gg <- gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = 'none')
@@ -60,7 +73,7 @@ gg <- gg + theme(axis.title.y=element_blank(), axis.text.y = element_blank(), ax
 print(gg)
 
 #Create the heatmap using the ggplot2 package more gradient scaled
-gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = odds_Brexit), color = "#FFFFFF", size = 0.25)
+gg <- ggplot() + geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = odds_region_brexit), color = "#FFFFFF", size = 0.25)
 gg <- gg + scale_fill_gradientn(colours = c("green", "blue", "red"))
 gg <- gg + coord_fixed(1)
 gg <- gg + theme_minimal()
