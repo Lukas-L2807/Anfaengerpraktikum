@@ -80,18 +80,3 @@ ggplot(Auswertung_2019, aes(x = Alt, y = Anteil.No.Brexit)) +
   geom_point() +
   geom_smooth(method = "lm")
 ```
-
-```{r age}
-gdp <- read.csv("37badfc8.csv")
-gdp
-brexitdata_regions
-
-table(sort(gdp$NUTS1.Regions) == sort(brexitdata_regions$Region)) #true
-
-brexitdata_regions_gdp <- gdp %>% inner_join(brexitdata_regions, by = c("NUTS1.Regions" = "Region"))
-brexitdata_regions_gdp
-
-ggplot(brexitdata_regions_gdp, aes(x = GDP.per..head........., y = mean_odds)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-```

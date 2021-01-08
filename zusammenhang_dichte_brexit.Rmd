@@ -27,6 +27,18 @@ Zusammenhang Bevölkerungsdichte und Leave-Entscheidung
 
 Scatterplots
 
+```{r change regionnames}
+brexitdata$Region <- str_replace_all(brexitdata$Region, "^East$", "East of England")
+brexitdata$Region <- str_replace_all(brexitdata$Region, "^East Midlands$", "East Midlands (England)")
+brexitdata$Region <- str_replace_all(brexitdata$Region, "^North East$", "North East (England)")
+brexitdata$Region <- str_replace_all(brexitdata$Region, "^North West$", "North West (England)")
+brexitdata$Region <- str_replace_all(brexitdata$Region, "^South East$", "South East (England)")
+brexitdata$Region <- str_replace_all(brexitdata$Region, "^South West$", "South West (England)")
+brexitdata$Region <- str_replace_all(brexitdata$Region, "^West Midlands$", "West Midlands (England)")
+unique(brexitdata$Region) #Kontrolle
+
+```
+
 ```{r Zusammenhang density und odds for leave(Brexit)}
 density_constituencies <- read.csv("density_constituencies.csv")
 density_constituencies #650
@@ -34,29 +46,31 @@ brexitdata #382
 brexitdata_regions <- brexitdata %>% 
   ungroup() %>%
   group_by(Region) %>%
-  mutate(mean_odds = mean(odds_Brexit))
-brexitdata_regions <- brexitdata_regions %>%
-  summarize(Region, mean_odds)
+  mutate(Sum_Remain = sum(Remain), Sum_Leave = sum(Leave)) %>%
+  mutate(odds_region_brexit = Sum_Leave / Sum_Remain) %>%
+  summarize(Region, Sum_Remain, Sum_Leave, odds_region_brexit)
 brexitdata_regions <- unique(brexitdata_regions)
+brexitdata_regions <- brexitdata_regions %>%
+  summarize(Region, odds_region_brexit)
 brexitdata_regions
 
 table(sort(unique(brexitdata_regions$Region)) == sort(unique(densityregion2019_df$Region))) #all names matching
 
 odds_over_density_data <- brexitdata_regions %>%
   inner_join(densityregion2019_df, by = "Region") %>% 
-  summarise(Region, mean_odds_for_leave = mean_odds, Population.density, log_density, Pension.age.percentage = Pension.age, Median.age, Working.age.16.to.64.years.percentage = Working.age.16.to.64.years)
+  summarise(Region, odds_region_brexit, Population.density, log_density, Pension.age.percentage = Pension.age, Median.age, Working.age.16.to.64.years.percentage = Working.age.16.to.64.years)
 odds_over_density_data
 
 ```
 
 ```{r plot zusammenhänge}
-ggplot(odds_over_density_data, aes(x = Population.density, y = mean_odds_for_leave)) +
+ggplot(odds_over_density_data, aes(x = Population.density, y = odds_region_brexit)) +
   geom_point()
 
-ggplot(odds_over_density_data, aes(x = log_density, y = mean_odds_for_leave)) +
+ggplot(odds_over_density_data, aes(x = log_density, y = odds_region_brexit)) +
   geom_point()
 
-ggplot(odds_over_density_data, aes(x = Pension.age.percentage, y = mean_odds_for_leave)) +
+ggplot(odds_over_density_data, aes(x = Pension.age.percentage, y = odds_region_brexit)) +
   geom_point()
 
 ggplot(odds_over_density_data, aes(x = Population.density, y = Pension.age.percentage)) +
@@ -64,7 +78,8 @@ ggplot(odds_over_density_data, aes(x = Population.density, y = Pension.age.perce
 
 ggplot(odds_over_density_data, aes(x = log_density, y = Pension.age.percentage)) +
   geom_point()
-#Suche area in hectar für die local authorities und mache das selbe wie oben für detallierteren Zusammenhang.(geschaut, aber wieder dimensionsfehler in Anzahl der local authorities, nutze lieber Schätzungen für constituencies)
+#Suche area in hectar für die local authorities und mache das selbe wie oben für detallierteren Zusammenhang.(geschaut, aber wieder dimensionsfehler in Anzahl der local authorities)
+
 
 ```
 
@@ -74,15 +89,15 @@ London als Ausreißer rauslassen
 odds_over_density_data_nolondon <- odds_over_density_data[odds_over_density_data$Region != "London",]
 odds_over_density_data_nolondon
 
-ggplot(odds_over_density_data_nolondon, aes(x = Population.density, y = mean_odds_for_leave)) +
+ggplot(odds_over_density_data_nolondon, aes(x = Population.density, y = odds_region_brexit)) +
   geom_point() + 
   geom_smooth(method = "lm")
 
-ggplot(odds_over_density_data_nolondon, aes(x = log_density, y = mean_odds_for_leave)) +
+ggplot(odds_over_density_data_nolondon, aes(x = log_density, y = odds_region_brexit)) +
   geom_point() + 
   geom_smooth(method = "lm")
 
-ggplot(odds_over_density_data_nolondon, aes(x = Pension.age.percentage, y = mean_odds_for_leave)) +
+ggplot(odds_over_density_data_nolondon, aes(x = Pension.age.percentage, y = odds_region_brexit)) +
   geom_point() + 
   geom_smooth(method = "lm")
 
@@ -96,10 +111,24 @@ ggplot(odds_over_density_data_nolondon, aes(x = log_density, y = Pension.age.per
 ```
 
 ```{r korrelationskoeffizient}
-cor(odds_over_density_data_nolondon[c("Population.density", "log_density", "Pension.age.percentage")], odds_over_density_data_nolondon[c("mean_odds_for_leave", "Pension.age.percentage")], use="complete.obs", method="pearson")
+cor(odds_over_density_data_nolondon[c("Population.density", "log_density", "Pension.age.percentage")], odds_over_density_data_nolondon[c("odds_region_brexit", "Pension.age.percentage")], use="complete.obs", method="pearson")
 
-cor(odds_over_density_data_nolondon[c("Population.density", "log_density", "Pension.age.percentage")], odds_over_density_data_nolondon[c("mean_odds_for_leave", "Pension.age.percentage")], use="complete.obs", method="kendall")
+cor(odds_over_density_data_nolondon[c("Population.density", "log_density", "Pension.age.percentage")], odds_over_density_data_nolondon[c("odds_region_brexit", "Pension.age.percentage")], use="complete.obs", method="kendall")
 
-cor(odds_over_density_data_nolondon[c("Population.density", "log_density", "Pension.age.percentage")], odds_over_density_data_nolondon[c("mean_odds_for_leave", "Pension.age.percentage")], use="complete.obs", method="spearman")
+cor(odds_over_density_data_nolondon[c("Population.density", "log_density", "Pension.age.percentage")], odds_over_density_data_nolondon[c("odds_region_brexit", "Pension.age.percentage")], use="complete.obs", method="spearman")
 ```
 
+```{r age}
+gdp <- read.csv("37badfc8.csv")
+gdp
+brexitdata_regions
+
+table(sort(gdp$NUTS1.Regions) == sort(brexitdata_regions$Region)) #true
+
+brexitdata_regions_gdp <- gdp %>% inner_join(brexitdata_regions, by = c("NUTS1.Regions" = "Region"))
+brexitdata_regions_gdp
+
+ggplot(brexitdata_regions_gdp, aes(x = GDP.per..head........., y = odds_region_brexit)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
