@@ -1,0 +1,34 @@
+---
+title: "Making of von Durchschnittsalter Tabelle"
+output: html_notebook
+---
+
+
+Alter nach Wahlkreisen in single years ohne Gruppe
+
+```{r import population by age in single years from excel data}
+population_by_ageyear <- read.csv("population-by-age_age-by-year.csv", sep = ";")
+population_by_ageyear 
+```
+
+```{r median age}
+#custom function for calculation of mean for this case
+mean_of_agegroup_function <- function(age_year, age_pop) {
+  sum(age_year * age_pop) / sum(age_pop)
+}
+
+#mean age by constituencies
+Mean_age_table <- population_by_ageyear %>% 
+  ungroup() %>% 
+  group_by(PCON11NM) %>%
+  mutate(Age_pop = as.numeric(str_replace_all(Age_pop, regex(","), ""))) %>%
+  mutate(Mean_Age = mean_of_agegroup_function(age_year = Age_year, age_pop = Age_pop)) %>%
+  ungroup() %>%
+  summarize(PCON11CD, PCON11NM, RegionID, RegionNM, Population = All.Ages, Mean_Age)
+Mean_age_table <- unique(Mean_age_table) 
+Mean_age_table
+
+#write table into csv
+write.csv(Mean_age_table, file = "Mean_age_by_constituencies.csv")
+
+```
